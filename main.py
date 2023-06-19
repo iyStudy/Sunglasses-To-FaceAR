@@ -2,7 +2,6 @@ import cv2
 import mediapipe as mp
 
 try:
-
     # MediaPipe Face Meshの初期化
     mp_face_mesh = mp.solutions.face_mesh
     face_mesh = mp_face_mesh.FaceMesh()

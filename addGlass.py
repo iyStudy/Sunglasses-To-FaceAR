@@ -36,7 +36,7 @@ try:
                 right_eye_outer = (int(face_landmarks.landmark[263].x * image.shape[1]), int(face_landmarks.landmark[263].y * image.shape[0]))
 
                 # サングラスの幅と高さを計算
-                sunglasses_width = int((right_eye_outer[0] - left_eye_outer[0]) * 1.6)  # 幅を60%大きくする
+                sunglasses_width = int((right_eye_outer[0] - left_eye_outer[0]) * 1.7)  # 幅を70%大きくする
                 aspect_ratio = sunglasses.shape[1] / sunglasses.shape[0]
                 sunglasses_height = int(sunglasses_width / aspect_ratio)
 
@@ -49,52 +49,18 @@ try:
 
                 # サングラスを配置する領域の左上の座標を計算
                 roi_top_left = (eye_center[0] - resized_sunglasses.shape[1] // 2,  # 中心に配置
-                                eye_center[1] - resized_sunglasses.shape[0] // 2)  # 中心より少し上に配置
-
-                # ROIの座標を調整して画像の境界を超えないようにする
-                roi_top_left = (max(roi_top_left[0], 0), max(roi_top_left[1], 0))
-                roi_bottom_right = (min(roi_top_left[0] + sunglasses_width, image.shape[1]),
-                                    min(roi_top_left[1] + sunglasses_height, image.shape[0]))
-
-                # サングラス画像とROIのサイズを調整
-                width = roi_bottom_right[0] - roi_top_left[0]
-                height = roi_bottom_right[1] - roi_top_left[1]
-                alpha = resized_sunglasses[:, :, 3] / 255.0
-                alpha = alpha[:height, :width]
-                resized_sunglasses = resized_sunglasses[:height, :width]
-
-                roi = image[roi_top_left[1]:roi_bottom_right[1], roi_top_left[0]:roi_bottom_right[0]]
-
-                image[roi_top_left[1]:roi_bottom_right[1], roi_top_left[0]:roi_bottom_right[0]] = \
-                    (1.0 - alpha).reshape(alpha.shape[0], alpha.shape[1], 1) * roi + \
-                    alpha.reshape(alpha.shape[0], alpha.shape[1], 1) * resized_sunglasses[:, :, :3]
+                                eye_center[1] - resized_sunglasses.shape[0] // 2 + 10)  # 中心より少し下に配置
 
                 # 合成領域を抽出
                 roi = image[roi_top_left[1]:roi_top_left[1] + sunglasses_height, roi_top_left[0]:roi_top_left[0] + sunglasses_width]
 
+                # サングラス画像のアルファチャンネルを使用して画像を合成
+                alpha = resized_sunglasses[:, :, 3] / 255.0
+                roi = roi * (1 - alpha.reshape(alpha.shape[0], alpha.shape[1], 1)) + \
+                    resized_sunglasses[:, :, :3] * alpha.reshape(alpha.shape[0], alpha.shape[1], 1)
 
-
-            # サングラス画像のアルファチャンネルを使用して画像を合成
-            alpha = resized_sunglasses[:, :, 3] / 255.0
-            
-            # ROIの座標を調整して画像の境界を超えないようにする
-            roi_top_left = (max(roi_top_left[0], 0), max(roi_top_left[1], 0))
-            roi_bottom_right = (min(roi_top_left[0] + sunglasses_width, image.shape[1]),
-                                min(roi_top_left[1] + sunglasses_height, image.shape[0]))
-            
-            # サングラス画像とROIのサイズを調整
-            width = roi_bottom_right[0] - roi_top_left[0]
-            height = roi_bottom_right[1] - roi_top_left[1]
-            alpha = alpha[:height, :width]
-            resized_sunglasses = resized_sunglasses[:height, :width]
-
-            roi = image[roi_top_left[1]:roi_bottom_right[1], roi_top_left[0]:roi_bottom_right[0]]
-
-            image[roi_top_left[1]:roi_bottom_right[1], roi_top_left[0]:roi_bottom_right[0]] = \
-                (1.0 - alpha).reshape(alpha.shape[0], alpha.shape[1], 1) * roi + \
-                alpha.reshape(alpha.shape[0], alpha.shape[1], 1) * resized_sunglasses[:, :, :3]
-
-
+                # ROIを元の画像に戻す
+                image[roi_top_left[1]:roi_top_left[1] + sunglasses_height, roi_top_left[0]:roi_top_left[0] + sunglasses_width] = roi
 
         # ウィンドウに表示
         cv2.imshow('MediaPipe FaceMesh with Sunglasses', image)
